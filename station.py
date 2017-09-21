@@ -54,7 +54,7 @@ class Station(object):
         import pandas as pd
         #get all files in directory *data*
         files = glob.glob(self.data)
-        files = files[0:100]
+        #files = files[0:100]
         if self.ts is None:
             self.ts = TimeSeries()
         for f in files:
@@ -77,8 +77,18 @@ class Station(object):
                 time,x,ux = splitline(X)
                 time,y,uy = splitline(Y)
                 time,z,uz = splitline(Z)
+                time1 = pd.datetime(2000,1,1,11,59,47)
+                time2 = pd.to_datetime(0)
+                timedif = time1-time2
+                time = pd.to_datetime(time,unit='s')+timedif
                 df = pd.DataFrame([[time,x,y,z,ux,uy,uz]],columns=['Time','X','Y','Z','UX','UY','UZ'])
                 self.ts.add_data(df)
+                os.system('mkdir %s'%(time.strftime('%Y-%m-%d')))
+                os.system('cp Summary %s'%(time.strftime('%Y-%m-%d')))
+                os.system('cp smoothFinal.gdcov %s'%(time.strftime('%Y-%m-%d')))
+                os.system('cp runAgain %s'%(time.strftime('%Y-%m-%d')))
+                os.system('cp rtgx_ppp_0.tree.err0_0 %s'%(time.strftime('%Y-%m-%d')))
+                os.system('cp rtgx_ppp_0.tree.log0_0 %s'%(time.strftime('%Y-%m-%d')))
 
             #append position and uncertainty to TS
 def splitline(line):
