@@ -35,8 +35,6 @@ class Station(object):
         self.data = data or []
         self.monument = monument
         self.setting = setting
-        self.antenna= antenna
-        self.jump_list = jump_list or []
         self.operators = operators or []
         self.ts = ts
 
@@ -54,7 +52,7 @@ class Station(object):
         import pandas as pd
         #get all files in directory *data*
         files = glob.glob(self.data)
-        #files = files[0:100]
+        files = files[0:200]
         if self.ts is None:
             self.ts = TimeSeries()
         for f in files:
@@ -63,14 +61,17 @@ class Station(object):
             #process each day
             if self.ts is None:
                 self.ts = TimeSeries()
+            os.system('tropNominal.py -m VMF1 -b %f -e %e -stns %s -append -o tdpIn.tdp'%(start,end,self.station))
+            # change tree to add in correct second order ionosphere
+            
             if tree is None:
-                os.system('gd2e.py -rnxFile %s -gdCov -nProcessors=4'%(f))
+                os.system('gd2e.py -runType=PPP -rnxFile %s -gdCov -nProcessors=4 -GNSSproducts /home/nvoss/orbits/sideshow.jpl.nasa.gov/pub/JPL_GPS_Products/Final'%(f))
             else:
-                os.system('gd2e.py -treeS Trees -rnxFile %s -gdCov'%(f))
+                os.system('gd2e.py -runType=PPP -treeS Trees -rnxFile %s -gdCov -GNSSproducts /home/nvoss/orbits/sideshow.jpl.nasa.gov/pub/JPL_GPS_Products/Final'%(f))
             #grep the summary file
 
-            with open('smoothFinal.gdcov') as f:
-                content = f.readlines() #read the files line by line
+            with open('smoothFinal.gdcov') as fil:
+                content = fil.readlines() #read the files line by line
                 X = content[1]
                 Y = content[2]
                 Z = content[3]
@@ -83,12 +84,11 @@ class Station(object):
                 time = pd.to_datetime(time,unit='s')+timedif
                 df = pd.DataFrame([[time,x,y,z,ux,uy,uz]],columns=['Time','X','Y','Z','UX','UY','UZ'])
                 self.ts.add_data(df)
-                os.system('mkdir %s'%(time.strftime('%Y-%m-%d')))
-                os.system('cp Summary %s'%(time.strftime('%Y-%m-%d')))
-                os.system('cp smoothFinal.gdcov %s'%(time.strftime('%Y-%m-%d')))
-                os.system('cp runAgain %s'%(time.strftime('%Y-%m-%d')))
-                os.system('cp rtgx_ppp_0.tree.err0_0 %s'%(time.strftime('%Y-%m-%d')))
-                os.system('cp rtgx_ppp_0.tree.log0_0 %s'%(time.strftime('%Y-%m-%d')))
+                os.system('mkdir %s'%(f.split('/')[7]))
+                os.system('mkdir %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
+                os.system('cp runAgain %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
+                os.system('cp rtgx_ppp_0.tree.err0_0 %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
+                os.system('cp rtgx_ppp_0.tree.log0_0 %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
 
             #append position and uncertainty to TS
 def splitline(line):
