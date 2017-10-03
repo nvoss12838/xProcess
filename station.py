@@ -15,6 +15,7 @@ import io
 import copy
 import os
 import warnings
+import fileinput
 
 import numpy as np
 from timeseries import TimeSeries
@@ -50,9 +51,12 @@ class Station(object):
         '''
         import glob
         import pandas as pd
+        import fileinput
+        import subprocess
+
         #get all files in directory *data*
         files = glob.glob(self.data)
-        files = files[0:200]
+        files = files[0:2]
         if self.ts is None:
             self.ts = TimeSeries()
         for f in files:
@@ -61,14 +65,31 @@ class Station(object):
             #process each day
             if self.ts is None:
                 self.ts = TimeSeries()
-            os.system('tropNominal.py -m VMF1 -b %f -e %e -stns %s -append -o tdpIn.tdp'%(start,end,self.station))
+
             # change tree to add in correct second order ionosphere
-            
+            #replace the ionex file summary file
+            year = f.split('/')[7]
+            print(f.split('/')[8])
+            day = f.split('/')[8][4:7]
+            print(day,year)
+            ionFile = ('/home/nvoss/goa-var/cddis.gsfc.nasa.gov/gps/products/ionex/%s/%s/jplg%s0.%si.Z'%(year,day,day,year[2:]))
+            print(ionFile)
+
+            date = subprocess.check_output('doy2date %s %s'%(day,year),shell=True)
+            start = subprocess.check_output('date2sec %s 00:00:00'%(date[0:10]),shell=True)[0:11]
+            end = subprocess.check_output('date2sec %s 23:59:59'%(date[0:10]),shell=True)[0:11]
+            #print('tropNominal.py -m VMF1 -b %s -e %s -stns %s -append -o tdpIn.tdp'%(start,end,self.name))
+            #os.system('tropNominal.py -m VMF1 -b %s -e %s -stns %s -append -o tdpIn.tdp'%(start,end,self.name))
+            #x = fileinput.input(files='Trees/Nick_0.tree',inplace=1)
+            #for line in x:
+                #if 'IONEXFILE ==*' in line:
+                    #line = line.replace("IONEXFILE ==*",'IONEXFILE == "%s"'%(ionFile))
+            replace('Trees/Nick_0.tree',"GLOBAL_EPOCH ==",'GLOBAL_EPOCH == %s'%(start))
+            replace('Trees/Nick_0.tree',"IONEXFILE ==",'IONEXFILE == %s'%(ionFile))
             if tree is None:
                 os.system('gd2e.py -runType=PPP -rnxFile %s -gdCov -nProcessors=4 -GNSSproducts /home/nvoss/orbits/sideshow.jpl.nasa.gov/pub/JPL_GPS_Products/Final'%(f))
             else:
-                os.system('gd2e.py -runType=PPP -treeS Trees -rnxFile %s -gdCov -GNSSproducts /home/nvoss/orbits/sideshow.jpl.nasa.gov/pub/JPL_GPS_Products/Final'%(f))
-            #grep the summary file
+                os.system('gd2e.py -runType=PPP -treeS Trees -rnxFile %s -nProcessors=1 -gdCov -GNSSproducts /home/nvoss/orbits/sideshow.jpl.nasa.gov/pub/JPL_GPS_Products/Final'%(f))
 
             with open('smoothFinal.gdcov') as fil:
                 content = fil.readlines() #read the files line by line
@@ -87,10 +108,23 @@ class Station(object):
                 os.system('mkdir %s'%(f.split('/')[7]))
                 os.system('mkdir %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
                 os.system('cp runAgain %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
-                os.system('cp rtgx_ppp_0.tree.err0_0 %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
-                os.system('cp rtgx_ppp_0.tree.log0_0 %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
+                os.system('cp rtgx_Nick_0.tree.err0_0 %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
+                os.system('cp rtgx_Nick_0.tree.log0_0 %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
 
             #append position and uncertainty to TS
 def splitline(line):
   index,sta,time,position,unc = line.split(' ')
   return int(time),float(position),float(unc)
+
+import re
+
+import fileinput
+import sys
+def replace(fil,inp,output):
+    for line in fileinput.input(fil,inplace=True):
+        # Whatever is written to stdout or with print replaces
+        # the current line
+        if line.startswith(inp):
+            print(output)
+        else:
+            sys.stdout.write(line)
