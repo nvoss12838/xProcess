@@ -56,7 +56,7 @@ class Station(object):
 
         #get all files in directory *data*
         files = glob.glob(self.data)
-        files = files[0:2]
+        #files = files[0:2]
         if self.ts is None:
             self.ts = TimeSeries()
         for f in files:
@@ -72,7 +72,7 @@ class Station(object):
             print(f.split('/')[8])
             day = f.split('/')[8][4:7]
             print(day,year)
-            ionFile = ('/home/nvoss/goa-var/cddis.gsfc.nasa.gov/gps/products/ionex/%s/%s/jplg%s0.%si.Z'%(year,day,day,year[2:]))
+            ionFile = ('/home/nvoss/goa-var/cddis.gsfc.nasa.gov/gps/products/ionex/%s/%s/jplg%s0.%si'%(year,day,day,year[2:]))
             print(ionFile)
 
             date = subprocess.check_output('doy2date %s %s'%(day,year),shell=True)
@@ -89,27 +89,29 @@ class Station(object):
             if tree is None:
                 os.system('gd2e.py -runType=PPP -rnxFile %s -gdCov -nProcessors=4 -GNSSproducts /home/nvoss/orbits/sideshow.jpl.nasa.gov/pub/JPL_GPS_Products/Final'%(f))
             else:
-                os.system('gd2e.py -runType=PPP -treeS Trees -rnxFile %s -nProcessors=1 -gdCov -GNSSproducts /home/nvoss/orbits/sideshow.jpl.nasa.gov/pub/JPL_GPS_Products/Final'%(f))
-
+                os.system('gd2e.py -runType=PPP -treeS Trees -rnxFile %s -nProcessors=4 -gdCov -GNSSproducts /home/nvoss/orbits/sideshow.jpl.nasa.gov/pub/JPL_GPS_Products/Final'%(f))
+            os.system('cp smoothFinal.gdcov %s.gdcov'%(date[:-1]))
+            print('sAVED')
             with open('smoothFinal.gdcov') as fil:
                 content = fil.readlines() #read the files line by line
                 X = content[1]
                 Y = content[2]
                 Z = content[3]
-                time,x,ux = splitline(X)
-                time,y,uy = splitline(Y)
-                time,z,uz = splitline(Z)
-                time1 = pd.datetime(2000,1,1,11,59,47)
-                time2 = pd.to_datetime(0)
-                timedif = time1-time2
-                time = pd.to_datetime(time,unit='s')+timedif
-                df = pd.DataFrame([[time,x,y,z,ux,uy,uz]],columns=['Time','X','Y','Z','UX','UY','UZ'])
-                self.ts.add_data(df)
+                #time,x,ux = splitline(X)
+                #time,y,uy = splitline(Y)
+                #time,z,uz = splitline(Z)
+                #time1 = pd.datetime(2000,1,1,11,59,47)
+                #time2 = pd.to_datetime(0)
+                #timedif = time1-time2
+                #time = pd.to_datetime(time,unit='s')+timedif
+                #df = pd.DataFrame([[time,x,y,z,ux,uy,uz]],columns=['Time','X','Y','Z','UX','UY','UZ'])
+                #self.ts.add_data(df)
                 os.system('mkdir %s'%(f.split('/')[7]))
                 os.system('mkdir %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
                 os.system('cp runAgain %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
                 os.system('cp rtgx_Nick_0.tree.err0_0 %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
                 os.system('cp rtgx_Nick_0.tree.log0_0 %s/%s'%(f.split('/')[7],f.split('/')[-1][4:7]))
+
 
             #append position and uncertainty to TS
 def splitline(line):
